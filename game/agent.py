@@ -2,6 +2,7 @@ import math
 import random
 from game.game import Game, BLACK, WHITE
 import copy
+import time
 
 
 agent_side = BLACK
@@ -35,7 +36,7 @@ class Node(object):
         #     return 0
 
     def optimal(self):
-        optimal_value = 0.
+        optimal_value = -0.1
         optimal_node = None
         for child in self.children:
             if float(child.q)/float(child.n) > optimal_value:
@@ -59,11 +60,13 @@ class Agent(object):
 
     def play(self,game):
         while True:
-            chess_id = self.chess_ids[int(random.random() * len(self.chess_ids))]
-            chess_id = copy.deepcopy(chess_id)
-            chess = game.construct_pos(chess_id)
+            operations = game.get_valid_operations()
+            operation = operations[int(random.random() * len(operations))]
+            # chess_id = self.chess_ids[int(random.random() * len(self.chess_ids))]
+            # chess_id = copy.deepcopy(chess_id)
+            # chess = game.construct_pos(chess_id)
             # print(self.chess_ids)
-            result = game.play_by_direction(chess, int(8 * random.random()))
+            result = game.play_by_direction(operation[0], operation[1])
             # print(self.chess_ids)
             if result == -3:
                 continue
@@ -92,16 +95,16 @@ class AIAgent(Agent):
         super( AIAgent, self).__init__(chess_ids, side)
         game = Game()
         self.node = Node([-1, -1, game.board], )
-        self.traversal_times = 400
+        self.traversal_times = 40
+
     def play(self,game):
         # traversal(node)
-
         self.process_opponent_operation(game)
         for i in range(self.traversal_times):
             traversal(self.node, self.side)
         next_node, operation_value = self.node.optimal()
         if not next_node:
-            return (-1) * self.side
+            return (-1) * opposite_side(self.side)
         self.node = next_node
         print(next_node)
         chess = next_node.choose_node
@@ -117,22 +120,31 @@ class AIAgent(Agent):
 
 
 class RandomAgent(Agent):
+    # def play(self,game):
+    #     while True:
+    #         chess_id = self.chess_ids[int(random.random() * len(self.chess_ids))]
+    #         chess_id = copy.deepcopy(chess_id)
+    #         chess = game.construct_pos(chess_id)
+    #         # print(self.chess_ids)
+    #         result = game.play_by_direction(chess, int(8 * random.random()))
+    #         # print(self.chess_ids)
+    #         if result == -3:
+    #             continue
+    #         elif result < 0:
+    #             # print(result)
+    #             # game.show()
+    #             return result
+    #         else:
+    #             return result
     def play(self,game):
-        while True:
-            chess_id = self.chess_ids[int(random.random() * len(self.chess_ids))]
-            chess_id = copy.deepcopy(chess_id)
-            chess = game.construct_pos(chess_id)
-            # print(self.chess_ids)
-            result = game.play_by_direction(chess, int(8 * random.random()))
-            # print(self.chess_ids)
-            if result == -3:
-                continue
-            elif result < 0:
-                # print(result)
-                # game.show()
-                return result
-            else:
-                return result
+        operations = game.get_valid_operations()
+        operation = operations[int(random.random() * len(operations))]
+        # chess_id = self.chess_ids[int(random.random() * len(self.chess_ids))]
+        # chess_id = copy.deepcopy(chess_id)
+        # chess = game.construct_pos(chess_id)
+        # print(self.chess_ids)
+        return game.play_by_direction(operation[0], operation[1])
+        # print(self.chess_ids)
 
 
 def upper_confidence_bounds( q, n, n_parent):
@@ -171,21 +183,21 @@ def tree_policy(node):
 
 
 def simulation(node, side):
-    # print("start simulation")
     game = Game(node.board,agent_side)
 
     black_agent = Agent(game.agents[BLACK],BLACK)
     white_agent = Agent(game.agents[WHITE],WHITE)
     r = 0
+    a = time.time()
     while True:
         r = black_agent.play(game)
         if r < 0:
             break
-        # white_agent.remove(r)
         r = white_agent.play(game)
         if r < 0:
             break
-        # black_agent.remove(r)
+    b = time.time()
+    # print(b - a)
     if (-1) * r == side:
         return 0
     elif (-1) * r == opposite_side(side):

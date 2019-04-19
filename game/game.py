@@ -2,6 +2,14 @@
 BLACK = 2
 WHITE = 1
 BLANK = 0
+
+def opposite_side(side):
+    if side == WHITE:
+        return BLACK
+    else:
+        return WHITE
+
+
 DIRECTION = {
     'UP': 0,
     'UP-RIGHT':1,
@@ -70,13 +78,14 @@ class Game(object):
             for j in range(8):
                 print(shown_text[self.board[i][j]],end=' | ')
             print("")
+        print("")
 
     # def play_by_pos(self, chess, next_pos):
     #     if self.valid(chess,next_pos):
     #         self.board[next_pos[0]][next_pos[1]] = self.status
     #         self.board[chess[0]][chess[1]] = BLANK
     #         self.switch()
-
+    # @staticmethod
     def parse_direction(self, direction):
         parsed_direction = [0, 0]
         if direction > 6 or direction < 2:
@@ -98,25 +107,47 @@ class Game(object):
             return False
         return True
 
-    def play_by_direction(self, chess, direction):
+    def play_by_direction(self, chess, direction, next_pos=None):
+        if not next_pos:
+            next_pos = self.get_next_pos(chess, direction)
+        self.last_operation = [chess, direction]
+        # if not self.check_pos(next_pos):
+        #     return -3
+        # print("here")
+        if not self.move(chess, next_pos):
+            return -3
+        # print("not 3")
+        # self.show()
+        if self.judge(WHITE) or len(self.agents[BLACK]) <= 1:
+            return (-1) * WHITE
+        elif self.judge(BLACK) or len(self.agents[WHITE]) <= 1:
+            return (-1) * BLACK
+        # print("black and white")
+        self.switch()
+        return next_pos[0] * 8 + next_pos[1]
         if self.valid_direction(chess,direction):
             # steps = self.next_steps(chess,direction)
             # parsed_direction = self.parse_direction(direction)
             # pos = (chess[0] + parsed_direction[0] * steps, chess[1] + parsed_direction[1] * steps)
-            next_pos = self.get_next_pos(chess, direction)
+            if not next_pos:
+                next_pos = self.get_next_pos(chess, direction)
             self.last_operation = [chess,direction]
-            if not self.check_pos(next_pos):
-                return -3
-
+            # if not self.check_pos(next_pos):
+            #     return -3
+            # print("here")
             if not self.move(chess, next_pos):
                 return -3
+            # print("not 3")
+            # self.show()
             if self.judge(WHITE) or len(self.agents[BLACK]) <= 1 :
                 return (-1) * WHITE
-            elif self.judge(BLACK) or len(self.agents[WHITE]) <= 1 :
+            elif self.judge(BLACK) or len(self.agents[WHITE]) <= 1:
                 return (-1) * BLACK
+            # print("black and white")
             self.switch()
             return next_pos[0] * 8 + next_pos[1]
         else:
+            print("???")
             return -3
 
     def move(self,chess,next_pos):
@@ -173,6 +204,7 @@ class Game(object):
 
     def next_steps(self,chess,direction):
         steps = 0
+        side = self.board[chess[0]][chess[1]]
         pos = []
         if direction % 4 == 0:
             for i in range(8):
@@ -187,8 +219,6 @@ class Game(object):
                 for i in range(chess[0] + chess[1] + 1):
                     if self.board[i][chess[0] + chess[1] - i] != BLANK:
                         steps += 1
-
-
         elif direction % 4 == 2:
             for i in range(8):
                 if self.board[chess[0]][i] != BLANK:
@@ -213,15 +243,31 @@ class Game(object):
     def construct_pos(id):
         return [int(id/8), id%8]
 
+    def valid_operation(self, chess_id, direction):
+        chess = self.construct_pos(chess_id)
+        steps = self.next_steps( chess, direction)
+        parsed_direction = self.parse_direction(direction)
+        next_pos = self.get_next_pos(chess, direction)
+        if not self.check_pos(next_pos):
+            return None
+        for i in range(1,steps):
+            if self.board[chess[0] + parsed_direction[0] * i][chess[1] + parsed_direction[1] * i] \
+                    == opposite_side(self.status):
+                return None
+
+        result = self.change_board(self.board, chess, next_pos, self.status)
+        if result:
+            return [chess, direction, result, next_pos]
+        else:
+            return None
+
     def get_valid_operations(self):
         operations = []
         for chess_id in self.agents[self.status]:
-            chess = self.construct_pos(chess_id)
             for i in range(8):
-                next_pos = self.get_next_pos(chess,i)
-                result = self.change_board(self.board, chess, next_pos, self.status)
-                if result:
-                    operations.append((chess, i, result))
+                operation = self.valid_operation(chess_id,i)
+                if operation:
+                    operations.append(operation)
         return operations
 
     def judge(self, side):
