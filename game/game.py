@@ -174,16 +174,14 @@ class Game(object):
         next_pos_id = next_pos[0] * 8 + next_pos[1]
         if self.board[next_pos[0]][next_pos[1]] == self.status:
             return False
-        elif self.board[next_pos[0]][next_pos[1]] == BLACK:
-            self.update_operation_candidates(chess_id, chess, next_pos_id, next_pos, self.board[chess[0]][chess[1]])
+        self.update_operation_candidates(chess_id, chess, next_pos_id, next_pos, self.board[chess[0]][chess[1]])
+        if self.board[next_pos[0]][next_pos[1]] == BLACK:
             self.count[BLACK] -= 1
             self.agents[BLACK].remove(next_pos_id)
         elif self.board[next_pos[0]][next_pos[1]] == WHITE:
-            self.update_operation_candidates(chess_id, chess, next_pos_id, next_pos, self.board[chess[0]][chess[1]])
             self.count[WHITE] -= 1
             self.agents[WHITE].remove(next_pos_id)
         else:
-            self.update_operation_candidates(chess_id, chess, next_pos_id, next_pos, self.board[chess[0]][chess[1]])
             pass
         self.board = self.change_board(self.board,chess,next_pos,self.status)
         # self.board[chess[0]][chess[1]] = BLANK

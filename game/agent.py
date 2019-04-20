@@ -55,7 +55,15 @@ class Agent(object):
     def __init__(self, chess_ids, side):
         self.side = side
         self.chess_ids = chess_ids
-
+    # def play(self,game):
+    #     operations = game.get_valid_operations_for_evaluation()
+    #     operation = operations[int(random.random() * len(operations))]
+    #     # chess_id = self.chess_ids[int(random.random() * len(self.chess_ids))]
+    #     # chess_id = copy.deepcopy(chess_id)
+    #     # chess = game.construct_pos(chess_id)
+    #     # print(self.chess_ids)
+    #     return game.play_by_direction(operation[0], operation[1])
+    #     # print(self.chess_ids)
     def play(self,game):
         test_count = 0
 
@@ -248,7 +256,7 @@ def simulation(node, side):
         count += 1
         threshold = 15.
         if count > 30:
-            if count % 6 == 0:
+            if count % 3 == 0:
                 evaluated_value = evaluate(game)
                 if evaluated_value > threshold:
                     r = (-1) * node.side
@@ -274,3 +282,30 @@ def opposite_side(side):
     else:
         return WHITE
 
+
+class PlayerAgent(Agent):
+    def play(self,game):
+        oper = game.get_valid_operations(); #get operations
+        while True:
+            row = input("Enter Chess Row:")
+            row = int(row)
+            col = input("Enter Chess Column:")
+            col = int(col)
+            chess = [row,col]
+            print("Available Direction(Goal Position)")
+            for i in range(len(oper)):
+                if chess==oper[i][0]: #chess==chess
+                    print(oper[i][1],oper[i][3]) #print direction
+                else:
+                    continue
+            dir = input("Enter Direction, or -1 for Back:")
+            dir = int(dir)
+            if dir == -1:
+                continue
+            result = game.play_by_direction(chess, dir)
+            if result == -3:
+                continue
+            elif result < 0:
+                return result
+            else:
+                return result
