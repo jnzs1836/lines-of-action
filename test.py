@@ -1,5 +1,5 @@
 from game.agent import Agent, Node, traversal, RandomAgent, AIAgent
-from game.game import Game, BLACK, BLANK, WHITE
+from game.game import Game, BLACK, BLANK, WHITE, evaluate_mobility
 if __name__ == '__main__':
     game = Game()
 
@@ -13,8 +13,9 @@ if __name__ == '__main__':
     # white_agent = RandomAgent(game.agents[random_side], random_side)
     # black_agent = AIAgent(game.agents[ai_side],ai_side)
     r = 0
+    print(evaluate_mobility(game))
     for i in range(1000):
-        print(i)
+        print(i, end=': ')
         r = agents[BLACK].play(game)
         if r < 0:
             break

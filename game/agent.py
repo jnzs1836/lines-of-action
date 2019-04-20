@@ -1,6 +1,6 @@
 import math
 import random
-from game.game import Game, BLACK, WHITE, evaluate
+from game.game import Game, BLACK, WHITE, BLANK, evaluate
 import copy
 import time
 from multiprocessing import Pool
@@ -34,8 +34,8 @@ class Node(object):
         #     return 0
 
     def optimal(self):
-        optimal_value = -0.1
-        optimal_node = None
+        optimal_value = float(self.children[0].q)/float(self.children[0].n)
+        optimal_node = self.children[0]
         for child in self.children:
             if float(child.q)/float(child.n) > optimal_value:
                 optimal_value = float(child.q)/float(child.n)
@@ -123,13 +123,12 @@ class Agent(object):
                 return operations[i]
 
 
-
 class AIAgent(Agent):
     def __init__(self, chess_ids, side):
         super( AIAgent, self).__init__(chess_ids, side)
         game = Game()
         self.node = Node([-1, -1, game.board], WHITE)
-        self.traversal_times = 40
+        self.traversal_times = 140
 
     def play(self,game):
         # traversal(node)
@@ -247,11 +246,20 @@ def simulation(node, side):
             r = (-1) * opposite_side(side)
             break
         count += 1
-        if count > 250:
-            print(count)
-
+        threshold = 15.
+        if count > 30:
+            if count % 6 == 0:
+                evaluated_value = evaluate(game)
+                if evaluated_value > threshold:
+                    r = (-1) * node.side
+                    break
+                elif evaluated_value < (-1) * threshold:
+                    r = (-1) * opposite_side(node.side)
+                    break
+        if count > 100:
+            return 0
     if (-1) * r == side:
-        return 0
+        return -1
     elif (-1) * r == opposite_side(side):
         return 1
     # if ((-1*r) & agent_side):
