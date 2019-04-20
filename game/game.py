@@ -31,14 +31,14 @@ class Game(object):
         }
         if board:
             self.board = board
-            self.status = BLACK
+            self.status = status
             self.count = [0,0,0]
 
             self.init_agents()
 
         else:
             self.board = []
-            self.status = BLACK
+            self.status = status
             self.count = [
                 0,12,12
             ]
@@ -107,24 +107,28 @@ class Game(object):
             return False
         return True
 
-    def play_by_direction(self, chess, direction, next_pos=None):
-        if not next_pos:
+    def play_by_direction_unsafe(self,  chess, direction):
+        if self.valid_direction(chess,direction):
+            # steps = self.next_steps(chess,direction)
+            # parsed_direction = self.parse_direction(direction)
+            # pos = (chess[0] + parsed_direction[0] * steps, chess[1] + parsed_direction[1] * steps)
             next_pos = self.get_next_pos(chess, direction)
-        self.last_operation = [chess, direction]
-        # if not self.check_pos(next_pos):
-        #     return -3
-        # print("here")
-        if not self.move(chess, next_pos):
+            self.last_operation = [chess,direction]
+            if not self.check_pos(next_pos):
+                return -3
+
+            if not self.move(chess, next_pos):
+                return -3
+            if self.judge(WHITE) :
+                return (-1) * WHITE
+            elif self.judge(BLACK):
+                return (-1) * BLACK
+            self.switch()
+            return next_pos[0] * 8 + next_pos[1]
+        else:
             return -3
-        # print("not 3")
-        # self.show()
-        if self.judge(WHITE) or len(self.agents[BLACK]) <= 1:
-            return (-1) * WHITE
-        elif self.judge(BLACK) or len(self.agents[WHITE]) <= 1:
-            return (-1) * BLACK
-        # print("black and white")
-        self.switch()
-        return next_pos[0] * 8 + next_pos[1]
+
+    def play_by_direction(self, chess, direction, next_pos=None):
         if self.valid_direction(chess,direction):
             # steps = self.next_steps(chess,direction)
             # parsed_direction = self.parse_direction(direction)
@@ -147,7 +151,6 @@ class Game(object):
             self.switch()
             return next_pos[0] * 8 + next_pos[1]
         else:
-            print("???")
             return -3
 
     def move(self,chess,next_pos):
@@ -270,6 +273,17 @@ class Game(object):
                     operations.append(operation)
         return operations
 
+    def get_invalid_operations(self):
+        operations = []
+        for chess_id in self.agents[self.status]:
+            chess = self.construct_pos(chess_id)
+            for i in range(8):
+                next_pos = self.get_next_pos(chess,i)
+                result = self.change_board(self.board, chess, next_pos, self.status)
+                if result:
+                    operations.append((chess, i, result))
+        return operations
+
     def judge(self, side):
         first_found_chess = [-1,-1]
         for i in range(8):
@@ -338,6 +352,9 @@ class Game(object):
             self.last_operation.append(self.board)
         return self.last_operation
 
+
+def evaluate(board, side):
+    return 3
 if __name__ == '__main__':
     game = Game()
     # game.show()

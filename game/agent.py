@@ -1,32 +1,30 @@
 import math
 import random
-from game.game import Game, BLACK, WHITE
+from game.game import Game, BLACK, WHITE, evaluate
 import copy
 import time
-
-
-agent_side = BLACK
+from multiprocessing import Pool
 
 
 class Node(object):
-    def __init__(self, operation, side=BLACK):
+    def __init__(self, operation, side=WHITE):
         self.q = 0
         self.n = 0
         self.side = side
         self.choose_node = operation[0]
         self.direction = operation[1]
         self.board = operation[2]
+        game = Game(self.board, opposite_side(self.side))
         self.children = []
         self.hash = 0
+        self.operations = game.get_valid_operations()
 
     def expand(self):
         flag = 0
-        game = Game(self.board)
-        operations = game.get_valid_operations()
-        if len(self.children) == len(operations):
+        if len(self.children) == len(self.operations):
             return None
         else:
-            created_node = Node(operations[len(self.children)])
+            created_node = Node(self.operations[len(self.children)], opposite_side(self.side))
             self.children.append(created_node)
             return created_node
         # for operation in game.get_valid_operations():
@@ -59,16 +57,29 @@ class Agent(object):
         self.chess_ids = chess_ids
 
     def play(self,game):
+        test_count = 0
+
         while True:
-            operations = game.get_valid_operations()
-            operation = operations[int(random.random() * len(operations))]
-            # chess_id = self.chess_ids[int(random.random() * len(self.chess_ids))]
-            # chess_id = copy.deepcopy(chess_id)
-            # chess = game.construct_pos(chess_id)
+            if test_count > len(self.chess_ids) * 8:
+                return (-1) * opposite_side(self.side)
+            # operations = game.get_invalid_operations()
+            # b = time.time()
+            # print(b-a)
+            # operation = operations[int(random.random() * len(operations))]
+            if len(self.chess_ids) <= 1:
+                return opposite_side(self.side)
+            index = int(random.random() * float(len(self.chess_ids)))
+            chess_id = self.chess_ids[index]
+            chess_id = copy.deepcopy(chess_id)
+            chess = game.construct_pos(chess_id)
             # print(self.chess_ids)
-            result = game.play_by_direction(operation[0], operation[1])
+            # a = time.time()
+            # result = game.play_by_direction(chess, operation[1])
+
             # print(self.chess_ids)
+            result = game.play_by_direction_unsafe(chess, int(8 * random.random()))
             if result == -3:
+                test_count += 1
                 continue
             elif result < 0:
                 # print(result)
@@ -89,27 +100,54 @@ class Agent(object):
         self.chess_ids.remove(old)
         self.chess_ids.append(r)
 
+    def corrective_strategy(self, game, operations):
+        bound = 3.
+        default_value = evaluate(game.board, self.side)
+        score_sum = 0.
+        epsilon = 0.001
+        scores = []
+        for operation in operations:
+            value = evaluate(operation[2], self.side)
+            if value > bound:
+                return operation
+            elif value <= default_value:
+                scores.append(epsilon)
+                # operation.append(epsilon)
+            else:
+                scores.append(value)
+            score_sum += value
+        score_sum += random.random()
+        for i in range(len(operations)):
+            score_sum -= scores[i]
+            if score_sum < 0:
+                return operations[i]
+
+
 
 class AIAgent(Agent):
     def __init__(self, chess_ids, side):
         super( AIAgent, self).__init__(chess_ids, side)
         game = Game()
-        self.node = Node([-1, -1, game.board], )
+        self.node = Node([-1, -1, game.board], WHITE)
         self.traversal_times = 40
 
     def play(self,game):
         # traversal(node)
         self.process_opponent_operation(game)
+        a = time.time()
         for i in range(self.traversal_times):
             traversal(self.node, self.side)
+
         next_node, operation_value = self.node.optimal()
         if not next_node:
             return (-1) * opposite_side(self.side)
         self.node = next_node
-        print(next_node)
         chess = next_node.choose_node
         direction = next_node.direction
-        return game.play_by_direction(chess, direction)
+        r = game.play_by_direction(chess, direction)
+        b = time.time()
+        print(b-a)
+        return r
 
     def process_opponent_operation(self, game):
         operation = game.get_last_operation()
@@ -152,11 +190,19 @@ def upper_confidence_bounds( q, n, n_parent):
         return q/n + c * math.sqrt(math.log(n_parent) / n)
 
 
+def get_simulation_func(expand_node, side):
+    def func(i):
+        return simulation(expand_node,side)
+    return func
+
+
 def traversal(node, side):
     delta = 0
-    simulation_times = 10
+    simulation_times = 1
     expand_node = node.expand()
     if expand_node:
+        # func = get_simulation_func(expand_node,side)
+        # results = list(pool.map(f,[0,0]))
         for i in range(simulation_times):
             delta += simulation(expand_node, side)
         expand_node.n += simulation_times
@@ -183,21 +229,27 @@ def tree_policy(node):
 
 
 def simulation(node, side):
-    game = Game(node.board,agent_side)
-
-    black_agent = Agent(game.agents[BLACK],BLACK)
-    white_agent = Agent(game.agents[WHITE],WHITE)
-    r = 0
     a = time.time()
+    game = Game(node.board, opposite_side(node.side))
+
+    node_agent = Agent(game.agents[node.side], node.side)
+    opponent_agent = Agent(game.agents[opposite_side(node.side)],opposite_side(node.side))
+    r = 0
+    count = 0
     while True:
-        r = black_agent.play(game)
+        r = opponent_agent.play(game)
         if r < 0:
             break
-        r = white_agent.play(game)
+        r = node_agent.play(game)
         if r < 0:
             break
-    b = time.time()
-    # print(b - a)
+        if len(game.agents[side]) <= 2:
+            r = (-1) * opposite_side(side)
+            break
+        count += 1
+        if count > 250:
+            print(count)
+
     if (-1) * r == side:
         return 0
     elif (-1) * r == opposite_side(side):
@@ -213,3 +265,4 @@ def opposite_side(side):
         return BLACK
     else:
         return WHITE
+

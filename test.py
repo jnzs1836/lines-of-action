@@ -4,15 +4,21 @@ if __name__ == '__main__':
     game = Game()
 
     game.show()
-    opponent = RandomAgent(game.agents[WHITE], WHITE)
-    ai = AIAgent(game.agents[BLACK],BLACK)
+    random_side = BLACK
+    ai_side = WHITE
+    agents = {
+        ai_side: AIAgent(game.agents[ai_side],ai_side),
+        random_side: RandomAgent(game.agents[random_side], random_side)
+    }
+    # white_agent = RandomAgent(game.agents[random_side], random_side)
+    # black_agent = AIAgent(game.agents[ai_side],ai_side)
     r = 0
     for i in range(1000):
         print(i)
-        r = ai.play(game)
+        r = agents[BLACK].play(game)
         if r < 0:
             break
-        r = opponent.play(game)
+        r = agents[WHITE].play(game)
         if r < 0:
             break
     if (-1) * r == BLACK:
